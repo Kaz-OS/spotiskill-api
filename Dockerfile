@@ -5,15 +5,11 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --production
 
-FROM base AS builder
+FROM base AS runner
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN bun run db:seed
-RUN bun run build
-
-FROM base AS runner
-WORKDIR /app
 ENV NODE_ENV=production
 
 EXPOSE 8080
