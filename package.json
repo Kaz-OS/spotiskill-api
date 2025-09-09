@@ -1,0 +1,16 @@
+{
+  "name": "spotiskill-api",
+  "version": "1.0.50",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "db:seed": "bun run src/seed.ts"
+  },
+  "dependencies": {
+    "@elysiajs/openapi": "^1.3.11",
+    "elysia": "latest"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}
