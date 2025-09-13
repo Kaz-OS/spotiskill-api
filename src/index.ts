@@ -4,7 +4,7 @@ import { Elysia, status, t } from "elysia";
 
 const sqlite = new SQL("sqlite://src/data.db");
 
-const app = new Elysia({ prefix: "/api" })
+new Elysia({ prefix: "/api" })
   .use(
     openapi({
       documentation: {
@@ -168,27 +168,58 @@ const app = new Elysia({ prefix: "/api" })
     }
   )
 
-  .get("/albums", async () => {
-    const data = await sqlite`
+  .get(
+    "/albums",
+    async () => {
+      const data = await sqlite`
     SELECT A.id as Album_id, A.title AS Album_title, A.artist, release_date, S.title AS Song_title, S.id AS song_id,  S.title AS Song_title
     FROM Album AS A
     INNER JOIN song AS S
     ON A.id = S.album_id
     `;
-    return status(200, {
-      data: data.map((item: any) => {
-        return {
-          Album_id: item.Album_id,
-          Album_title: item.Album_title,
-          artist: item.artist,
-          song: {
-            song_id: item.song_id,
-            Song_title: item.Song_title,
+      return status(200, {
+        Album: data.map((item: any) => {
+          return {
+            id: item.Album_id,
+            title: item.Album_title,
+            artist: item.artist,
+            song: {
+              id: item.song_id,
+              title: item.Song_title,
+            },
+          };
+        }),
+      });
+    },
+    {
+      response: {
+        200: t.Object(
+          {
+            Album: t.Array(
+              t.Object({
+                id: t.Number({ description: "Identifiant unique de l'album." }),
+                title: t.String({ description: "Titre de l'album." }),
+                artist: t.String({ description: "Nom de l'artiste qui a créé l'album." }),
+                release_date: t.String({ format: "Date", description: "Date de sortie de l'album." }),
+                songs: t.Array(
+                  t.Object({
+                    id: t.Number({ description: "Identifiant unique de la musique." }),
+                    title: t.String({ description: "Titre de la chanson" }),
+                    artist: t.String({ description: "Artiste de la chanson" }),
+                  })
+                ),
+              })
+            ),
           },
-        };
-      }),
-    });
-  })
+          { description: "OK" }
+        ),
+      },
+      detail: {
+        summary: "Récupérer un album.",
+        description: "",
+      },
+    }
+  )
 
   .get(
     "/playlists",
@@ -247,6 +278,26 @@ const app = new Elysia({ prefix: "/api" })
       detail: {
         summary: "Recupère une liste de Playlists",
         description: "",
+      },
+    }
+  )
+
+  .get(
+    "/stats",
+    async () => {
+      const data = await sqlite``;
+      return status(200, { stats: data });
+    },
+    {
+      response: {
+        200: t.Object({
+          stats: t.Array(t.Object({})),
+        }),
+      },
+      detail: {
+        summary: "Récupérer des statistiques sur l'utilisation du service de streaming musical",
+        description:
+          "Cette API permet de récupérer des statistiques sur l'utilisation du service de streaming musical, telles que les genres musicaux préférés, le nombre de morceaux écoutés, le temps d'écoute total, le temps d'écoute par utilisateur, la musique la plus écoutée de l'année, du mois et de la semaine.",
       },
     }
   )
