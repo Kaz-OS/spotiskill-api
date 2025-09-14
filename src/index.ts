@@ -289,10 +289,77 @@ new Elysia({ prefix: "/api" })
       return status(200, { stats: data });
     },
     {
-      response: {
-        200: t.Object({
-          stats: t.Array(t.Object({})),
+      query: t.Object({
+        type: t.UnionEnum(["artists", "albums", "songs", "playing_time"], {
+          description: "Type de statistique à récupérer.",
         }),
+        user_id: t.Optional(
+          t.Integer({
+            description: "Identifiant de l'utilisateur dont les statistiques doivent être récupérées.",
+          })
+        ),
+        from: t.Optional(
+          t.String({
+            description: "Date de début de la période sur laquelle récupérer les statistiques au format YYYY-MM-DD.",
+          })
+        ),
+        to: t.Optional(
+          t.String({
+            description: "Date de fin de la période sur laquelle récupérer les statistiques au format YYYY-MM-DD.",
+          })
+        ),
+      }),
+      response: {
+        200: t.Object(
+          {
+            stats: t.Object({
+              albums: t.Optional(
+                t.Array(
+                  t.Object({
+                    time: t.Integer({ examples: [3185] }),
+                    title: t.String({ examples: ["Led Zeppelin IV"] }),
+                    artist: t.String({ examples: ["Led Zeppelin"] }),
+                  }),
+                  {
+                    description: "Liste des 3 albums les plus écoutés quand le type est albums.",
+                  }
+                )
+              ),
+              songs: t.Optional(
+                t.Array(
+                  t.Object({
+                    time: t.Integer({ examples: [2275] }),
+                    title: t.String({ examples: ["Black Dog"] }),
+                    artist: t.String({ examples: ["Led Zeppelin"] }),
+                  }),
+                  {
+                    description: "Liste des 3 morceaux les plus écoutés quand le type est songs.",
+                  }
+                )
+              ),
+              artists: t.Optional(
+                t.Array(
+                  t.Object({
+                    time: t.Integer({ examples: [3185] }),
+                    artist: t.String({ examples: ["Led Zeppelin"] }),
+                  }),
+                  {
+                    description: "Liste des 3 artistes les plus écoutés quand le type est artists.",
+                  }
+                )
+              ),
+              playing: t.Optional(
+                t.Integer({
+                  description: "Temps d'écoute total quand le type est playing_time.",
+                  examples: 5008,
+                })
+              ),
+            }),
+          },
+          {
+            description: "Statistiques récupérées avec succès.",
+          }
+        ),
       },
       detail: {
         summary: "Récupérer des statistiques sur l'utilisation du service de streaming musical",
@@ -301,5 +368,4 @@ new Elysia({ prefix: "/api" })
       },
     }
   )
-
   .listen(8080);
