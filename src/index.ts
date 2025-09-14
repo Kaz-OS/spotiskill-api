@@ -15,6 +15,51 @@ new Elysia({ prefix: "/api" })
       },
     })
   )
+  .post(
+    "/signup",
+    async ({ body }) => {
+      if (!body.email || body.first_name || body.password || body.confirm_password || body.last_name) {
+        return status(400);
+      }
+      const data = await sqlite`
+      INSERT INTO SingupRequest (id, email, password, first_name, last_name)
+      VALUES ($[body.email], $[body.first_name], $[body.password], $[body.last_name])
+    `;
+      return status(201);
+    },
+    {
+      body: t.Object({
+        email: t.String({ format: "eamil", description: "Adresse email de l'utilisateur" }),
+        password: t.String({ formaat: "password", description: "Mot de passe de l'utilisateur" }),
+        confirm_password: t.String({
+          format: "password",
+          description: "Confirmation du mot de passe de l'utilisateur",
+        }),
+        first_name: t.String({ description: "Prénom de l'utilisateur" }),
+        last_name: t.String({ description: "Nom de famille de l'utilisateur" }),
+      }),
+      response: {
+        201: t.Object(
+          {
+            message: t.String({ examples: ["Demande d'inscription ajoutée avec succès"] }),
+          },
+          { description: "Demande d'inscription ajoutée avec succès" }
+        ),
+        400: t.Object(
+          {
+            message: t.String({ examples: ["La requête est mal formulée"] }),
+          },
+          { description: "La requête est mal formulée" }
+        ),
+      },
+      detail: {
+        summary: "Crée une nouvelle demande d'inscription",
+        description:
+          "Crée une nouvelle demande d'inscription et l'ajoute à la base de données du service de streaming musical",
+      },
+    }
+  )
+
   .get(
     "/signup",
     async () => {
@@ -105,6 +150,45 @@ new Elysia({ prefix: "/api" })
     }
   )
 
+  .post(
+    "/songs",
+    async ({ body }) => {
+      if (!body.album_id || body.artist || body.title) {
+        return status(200);
+      }
+      await sqlite`
+        INSERT INTO Song (title, artist, album_id)
+        VALUES ($[body.title], $[body.artist], $[body.album_id])
+      `;
+      return status(201);
+    },
+    {
+      body: t.Object({
+        title: t.String({ description: "Titre de la chanson" }),
+        artist: t.String({ description: "Artiste de la chanson" }),
+        album_id: t.Integer({ description: "Identifiant unique de l'album" }),
+      }),
+      response: {
+        201: t.Object(
+          {
+            message: t.String({ examples: ["Chanson ajoutée avec succès"] }),
+          },
+          { description: "Chanson ajoutée avec succès" }
+        ),
+        400: t.Object(
+          {
+            message: t.String({ examples: ["Chanson ajoutée avec succès"] }),
+          },
+          { description: "Chanson ajoutée avec succès" }
+        ),
+      },
+      detail: {
+        summary: "Ajoute une nouvelle chanson",
+        description: "Ajoute une nouvelle chanson à la bibliothèque de musique du service de streaming musical",
+      },
+    }
+  )
+
   .get(
     "/songs/:id",
     async ({ params }) => {
@@ -172,38 +256,49 @@ new Elysia({ prefix: "/api" })
     "/albums",
     async () => {
       const data = await sqlite`
-    SELECT A.id as Album_id, A.title AS Album_title, A.artist, release_date, S.title AS Song_title, S.id AS song_id,  S.title AS Song_title
-    FROM Album AS A
-    INNER JOIN song AS S
-    ON A.id = S.album_id
-    `;
-      return status(200, {
-        Album: data.map((item: any) => {
-          return {
-            id: item.Album_id,
-            title: item.Album_title,
-            artist: item.artist,
-            song: {
-              id: item.song_id,
-              title: item.Song_title,
-            },
+        SELECT A.id, A.title, A.artist, A.release_date, S.id AS song_id, S.title AS song_title, S.artist AS song_artist
+        FROM Album AS A
+        INNER JOIN Song AS S ON A.id = S.album_id
+        ORDER BY A.release_date
+      `;
+
+      const albumsMap: Record<number, any> = {};
+
+      for (const row of data) {
+        if (!albumsMap[row.id]) {
+          albumsMap[row.id] = {
+            id: row.id,
+            title: row.title,
+            artist: row.artist,
+            release_date: row.release_date,
+            songs: [],
           };
-        }),
+        }
+
+        albumsMap[row.id].songs.push({
+          id: row.song_id,
+          title: row.song_title,
+          artist: row.song_artist,
+        });
+      }
+
+      return status(200, {
+        albums: Object.values(albumsMap),
       });
     },
     {
       response: {
         200: t.Object(
           {
-            Album: t.Array(
+            albums: t.Array(
               t.Object({
-                id: t.Number({ description: "Identifiant unique de l'album." }),
-                title: t.String({ description: "Titre de l'album." }),
-                artist: t.String({ description: "Nom de l'artiste qui a créé l'album." }),
-                release_date: t.String({ format: "Date", description: "Date de sortie de l'album." }),
+                id: t.Number({ description: "Identifiant unique de l'album" }),
+                title: t.String({ description: "Titre de l'album" }),
+                artist: t.String({ description: "Nom de l'artiste qui a créé l'album" }),
+                release_date: t.String({ format: "date", description: "Date de sortie de l'album" }),
                 songs: t.Array(
                   t.Object({
-                    id: t.Number({ description: "Identifiant unique de la musique." }),
+                    id: t.Number({ description: "Identifiant unique de la chanson" }),
                     title: t.String({ description: "Titre de la chanson" }),
                     artist: t.String({ description: "Artiste de la chanson" }),
                   })
@@ -211,12 +306,12 @@ new Elysia({ prefix: "/api" })
               })
             ),
           },
-          { description: "OK" }
+          { description: "Liste des albums récupérés avec succès" }
         ),
       },
       detail: {
-        summary: "Récupérer un album.",
-        description: "",
+        summary: "Récupérer tous les albums",
+        description: "Cette API permet de récupérer tous les albums disponibles dans le service de streaming musical",
       },
     }
   )
