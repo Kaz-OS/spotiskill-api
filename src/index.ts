@@ -361,6 +361,14 @@ new Elysia({ prefix: "/api" })
           }
         ),
       },
+      400: t.Object(
+        {
+          message: t.String({ examples: "La requête est mal formulée" }),
+        },
+        {
+          description: "La requête est mal formulée",
+        }
+      ),
       detail: {
         summary: "Récupérer des statistiques sur l'utilisation du service de streaming musical",
         description:
