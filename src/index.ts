@@ -23,7 +23,7 @@ new Elysia({ prefix: "/api" })
       }
       const data = await sqlite`
       INSERT INTO SingupRequest (id, email, password, first_name, last_name)
-      VALUES ($[body.email], $[body.first_name], $[body.password], $[body.last_name])
+      VALUES (${body.email}, ${body.first_name}, ${body.password}, ${body.last_name})
     `;
       return status(201);
     },
@@ -158,7 +158,7 @@ new Elysia({ prefix: "/api" })
       }
       await sqlite`
         INSERT INTO Song (title, artist, album_id)
-        VALUES ($[body.title], $[body.artist], $[body.album_id])
+        VALUES (${body.title}, ${body.artist}, ${body.album_id})
       `;
       return status(201);
     },
@@ -312,6 +312,41 @@ new Elysia({ prefix: "/api" })
       detail: {
         summary: "Récupérer tous les albums",
         description: "Cette API permet de récupérer tous les albums disponibles dans le service de streaming musical",
+      },
+    }
+  )
+
+  .post(
+    "/albums",
+    async ({ body }) => {
+      if (!body.title || body.artist || body.release_date) {
+        return status(400);
+      }
+      const data = await sqlite`
+      INSERT INTO Album(title, artist, release_date)
+      VALUES(${body.title}, ${body.artist}, ${body.release_date})
+    `;
+      return status(201);
+    },
+    {
+      body: t.Object({
+        title: t.String({ description: "Titre de l'album créer" }),
+        artist: t.String({ description: "Nom de l'artiste qui a créer l'album" }),
+        release_date: t.Date({ description: "Date de sortie de l'album" }),
+      }),
+      response: {
+        400: t.Object(
+          {
+            message: t.String({ examples: ["La requête est mal formulée"] }),
+          },
+          { description: "La requete est mal formulé" }
+        ),
+        201: t.Object(
+          {
+            message: t.String({ examples: ["Album créé avec succès."] }),
+          },
+          { description: "Album ajouté avec succès" }
+        ),
       },
     }
   )
