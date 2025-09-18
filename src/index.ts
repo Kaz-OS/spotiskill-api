@@ -18,19 +18,19 @@ new Elysia({ prefix: "/api" })
   .post(
     "/signup",
     async ({ body }) => {
-      if (!body.email || body.first_name || body.password || body.confirm_password || body.last_name) {
-        return status(400);
+      if (!body.email || !body.first_name || !body.password || !body.confirm_password || !body.last_name) {
+        return status(400, { message: "La requête est mal formulée" });
       }
       const data = await sqlite`
-      INSERT INTO SingupRequest (id, email, password, first_name, last_name)
+      INSERT INTO SingupRequest (email, password, first_name, last_name)
       VALUES (${body.email}, ${body.first_name}, ${body.password}, ${body.last_name})
     `;
-      return status(201);
+      return status(201, { message: "Demande d'inscription ajoutée avec succès" });
     },
     {
       body: t.Object({
-        email: t.String({ format: "eamil", description: "Adresse email de l'utilisateur" }),
-        password: t.String({ formaat: "password", description: "Mot de passe de l'utilisateur" }),
+        email: t.String({ format: "email", description: "Adresse email de l'utilisateur" }),
+        password: t.String({ format: "password", description: "Mot de passe de l'utilisateur" }),
         confirm_password: t.String({
           format: "password",
           description: "Confirmation du mot de passe de l'utilisateur",
@@ -153,14 +153,14 @@ new Elysia({ prefix: "/api" })
   .post(
     "/songs",
     async ({ body }) => {
-      if (!body.album_id || body.artist || body.title) {
-        return status(200);
+      if (!body.album_id || !body.artist || !body.title) {
+        return status(200, { message: "Chanson ajoutée avec succès" });
       }
       await sqlite`
         INSERT INTO Song (title, artist, album_id)
         VALUES (${body.title}, ${body.artist}, ${body.album_id})
       `;
-      return status(201);
+      return status(201, { message: "La requete est mal formulé" });
     },
     {
       body: t.Object({
@@ -177,9 +177,9 @@ new Elysia({ prefix: "/api" })
         ),
         400: t.Object(
           {
-            message: t.String({ examples: ["Chanson ajoutée avec succès"] }),
+            message: t.String({ examples: ["La requete est mal formulé"] }),
           },
-          { description: "Chanson ajoutée avec succès" }
+          { description: "La requete est mal formulé" }
         ),
       },
       detail: {
@@ -319,14 +319,14 @@ new Elysia({ prefix: "/api" })
   .post(
     "/albums",
     async ({ body }) => {
-      if (!body.title || body.artist || body.release_date) {
-        return status(400);
+      if (!body.title || !body.artist || !body.release_date) {
+        return status(400, { message: "La requête est mal formulée" });
       }
       const data = await sqlite`
-      INSERT INTO Album(title, artist, release_date)
+      INSERT INTO Album (title, artist, release_date)
       VALUES(${body.title}, ${body.artist}, ${body.release_date})
     `;
-      return status(201);
+      return status(201, { message: "Album ajouté avec succès" });
     },
     {
       body: t.Object({
