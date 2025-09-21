@@ -22,7 +22,7 @@ new Elysia({ prefix: "/api" })
         return status(400, { message: "La requête est mal formulée" });
       }
       const data = await sqlite`
-      INSERT INTO SingupRequest (email, password, first_name, last_name)
+      INSERT INTO SignupRequest (email, password, first_name, last_name)
       VALUES (${body.email}, ${body.first_name}, ${body.password}, ${body.last_name})
     `;
       return status(201, { message: "Demande d'inscription ajoutée avec succès" });
@@ -30,9 +30,8 @@ new Elysia({ prefix: "/api" })
     {
       body: t.Object({
         email: t.String({ format: "email", description: "Adresse email de l'utilisateur" }),
-        password: t.String({ format: "password", description: "Mot de passe de l'utilisateur" }),
+        password: t.String({ description: "Mot de passe de l'utilisateur" }),
         confirm_password: t.String({
-          format: "password",
           description: "Confirmation du mot de passe de l'utilisateur",
         }),
         first_name: t.String({ description: "Prénom de l'utilisateur" }),
@@ -102,7 +101,7 @@ new Elysia({ prefix: "/api" })
       const data = await sqlite`
         SELECT S.id, S.title, S.artist, A.id as album_id, A.title as album_title, release_date
         FROM Song AS S
-        INNER JOIN Album AS A ON S.album_id = A.id
+        LEFT JOIN Album AS A ON S.album_id = A.id
       `;
 
       return status(200, {
@@ -133,7 +132,7 @@ new Elysia({ prefix: "/api" })
                 album: t.Object({
                   id: t.Number({ description: "Identifiant de l'Album" }),
                   title: t.String({ description: "Titre de l'Album" }),
-                  Artiste: t.String({ description: "Nom de l'Artiste qui a créer l'Album" }),
+                  artist: t.String({ description: "Nom de l'Artiste qui a créer l'Album" }),
                   release_date: t.String({ format: "date", description: "Date de sortie de l'Album" }),
                 }),
               })
@@ -258,7 +257,7 @@ new Elysia({ prefix: "/api" })
       const data = await sqlite`
         SELECT A.id, A.title, A.artist, A.release_date, S.id AS song_id, S.title AS song_title, S.artist AS song_artist
         FROM Album AS A
-        INNER JOIN Song AS S ON A.id = S.album_id
+        LEFT JOIN Song AS S ON A.id = S.album_id
         ORDER BY A.release_date
       `;
 
@@ -275,11 +274,18 @@ new Elysia({ prefix: "/api" })
           };
         }
 
-        albumsMap[row.id].songs.push({
-          id: row.song_id,
-          title: row.song_title,
-          artist: row.song_artist,
-        });
+        if (!albumsMap[row.id].songs) {
+          continue;
+        }
+
+        // Only add songs if song_id is not null (album has songs)
+        if (row.song_id !== null) {
+          albumsMap[row.id].songs.push({
+            id: row.song_id,
+            title: row.song_title,
+            artist: row.song_artist,
+          });
+        }
       }
 
       return status(200, {
@@ -332,7 +338,7 @@ new Elysia({ prefix: "/api" })
       body: t.Object({
         title: t.String({ description: "Titre de l'album créer" }),
         artist: t.String({ description: "Nom de l'artiste qui a créer l'album" }),
-        release_date: t.Date({ description: "Date de sortie de l'album" }),
+        release_date: t.String({ format: "date", description: "Date de sortie de l'album" }),
       }),
       response: {
         400: t.Object(
