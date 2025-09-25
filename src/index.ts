@@ -357,6 +357,58 @@ new Elysia({ prefix: "/api" })
     }
   )
 
+  .post(
+    "/playlists",
+    async ({ body }) => {
+      if (!body.title || !body.author || body.songs) {
+        return status(400, { message: "La requête est mal formulée" });
+      }
+      const data = await sqlite`
+        INSERT INTO Playlist (title, author)
+        VALUES (${body.title}, ${body.author})
+      `;
+      return status(201, { message: "Playlist ajoutée avec succès" });
+    },
+    {
+      body: t.Object({
+        title: t.String({ description: "Titre de la playlist" }),
+        author: t.String({ description: "Auteur de la playlist" }),
+        songs: t.Array(
+          t.Object({
+            id: t.Number({ description: "Id de la chanson" }),
+            title: t.String({ description: "Titre de la chanson" }),
+            artist: t.String({ description: "Artiste de la chanson" }),
+            album: t.String({ description: "Album de la chanson" }),
+          })
+        ),
+      }),
+      response: {
+        201: t.Object(
+          {
+            message: t.String({ examples: ["Playlist ajoutée avec succès"] }),
+          },
+          { description: "Playlist ajoutée avec succès" }
+        ),
+        400: t.Object(
+          {
+            message: t.String({ examples: ["La requête est mal formulée"] }),
+          },
+          { description: "La requête est mal formulée" }
+        ),
+        404: t.Object(
+          {
+            message: t.String({ examples: ["La chanson n'existe pas"] }),
+          },
+          { description: "La chanson n'existe pas" }
+        ),
+      },
+      detail: {
+        summary: "Crée une nouvelle playlist",
+        description: "Crée une nouvelle playlist et l'ajoute à la base de données du service de streaming musical",
+      },
+    }
+  )
+
   .get(
     "/playlists",
     async () => {
