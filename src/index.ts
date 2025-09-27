@@ -15,6 +15,89 @@ new Elysia({ prefix: "/api" })
       },
     })
   )
+
+  .put(
+    "/signup/:id/accept",
+    async ({ params }) => {
+      const data = await sqlite`
+        SELECT id
+        FROM SignupRequest
+        WHERE id = ${params.id}
+      `;
+
+      if (data.length == 0) {
+        return status(404, { message: "La demande d'inscription n'existe pas" });
+      }
+
+      await sqlite`
+        UPDATE SignupRequest
+        SET status = 'accepted'
+        WHERE id = ${params.id}
+      `;
+
+      return status(200, { message: "Demande d'inscription acceptée avec succès" });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ description: "ID de la demande d'inscription" }),
+      }),
+      response: {
+        200: t.Object({
+          message: t.String({ examples: ["Demande d'inscription acceptée avec succès"] }),
+        }),
+        404: t.Object({
+          message: t.String({ examples: ["La demande d'inscription n'existe pas"] }),
+        }),
+      },
+      detail: {
+        summary: "Accepter une demande d'inscription",
+      },
+    }
+  )
+
+  .put(
+    "/signup/:id/reject",
+    async ({ params }) => {
+      const data = await sqlite`
+        SELECT id
+        FROM  SignupRequest
+        WHERE id = ${params.id}
+      `;
+
+      if (data.length == 0) {
+        return status(404, { message: "La demande d'inscription n'existe pas" });
+      }
+
+      await sqlite`
+        UPDATE SignupRequest
+        SET status = 'rejected'
+        WHERE id = ${params.id}
+      `;
+
+      if (data.length == 0) {
+        return status(404, { message: "La demande d'inscription n'existe pas" });
+      }
+
+      return status(200, { message: "Demande d'inscription acceptée avec succès" });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ description: "ID de la demande d'inscription" }),
+      }),
+      response: {
+        200: t.Object({
+          message: t.String({ examples: ["Demande d'inscription refusée avec succès"] }),
+        }),
+        404: t.Object({
+          message: t.String({ examples: ["La demande d'inscription n'existe pas"] }),
+        }),
+      },
+      detail: {
+        summary: "Reuser une demande d'inscription",
+      },
+    }
+  )
+
   .post(
     "/signup",
     async ({ body }) => {
@@ -360,7 +443,7 @@ new Elysia({ prefix: "/api" })
   .post(
     "/playlists",
     async ({ body }) => {
-      if (!body.title || !body.author || body.songs) {
+      if (!body.title || !body.author || !body.songs) {
         return status(400, { message: "La requête est mal formulée" });
       }
       const data = await sqlite`
@@ -413,11 +496,11 @@ new Elysia({ prefix: "/api" })
     "/playlists",
     async () => {
       const data = await sqlite`
-        SELECT P.id, P.title, P.author, S.id AS song_id, S.title AS song_title, S.artist AS song_artist
-        FROM Playlist AS P
-        INNER JOIN PlaylistSong AS PS ON P.id = PS.playlist_id
-        INNER JOIN Song AS S ON PS.song_id = S.id
-        ORDER BY P.id, PS.position
+      SELECT P.id, P.title, P.author, S.id AS song_id, S.title AS song_title, S.artist AS song_artist
+      FROM Playlist AS P
+      LEFT JOIN PlaylistSong AS PS ON P.id = PS.playlist_id
+      LEFT JOIN Song AS S ON PS.song_id = S.id
+      ORDER BY P.id, PS.position
       `;
 
       const playlistsMap: Record<number, any> = {};
@@ -432,11 +515,14 @@ new Elysia({ prefix: "/api" })
           };
         }
 
-        playlistsMap[row.id].songs.push({
-          id: row.song_id,
-          title: row.song_title,
-          artist: row.song_artist,
-        });
+        // Only add songs if song_id is not null (playlist has songs)
+        if (row.song_id !== null) {
+          playlistsMap[row.id].songs.push({
+            id: row.song_id,
+            title: row.song_title,
+            artist: row.song_artist,
+          });
+        }
       }
 
       return status(200, { playlists: Object.values(playlistsMap) });
